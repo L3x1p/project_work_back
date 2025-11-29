@@ -1,6 +1,6 @@
 # Backend API Documentation
 
-**Base URL:** `http://localhost:8000`  
+**Basee URL:** `http://localhost:8000`  
 **API Version:** 1.0  
 **Framework:** FastAPI
 
