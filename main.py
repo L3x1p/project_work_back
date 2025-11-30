@@ -2,9 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, Session
+from sqlalchemy.orm import sessionmaker, Session, relationship
+from sqlalchemy.ext.mutable import MutableList
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
 from jose import JWTError, jwt
@@ -13,6 +14,7 @@ import os
 from typing import Optional
 import pdfplumber
 from io import BytesIO
+from career_summarizer_service import summarize_career_fields
 
 # ============================================
 # Configuration
@@ -56,6 +58,35 @@ class RefreshToken(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     expires_at = Column(DateTime, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+
+# SQLAlchemy Career Field Model
+class CareerField(Base):
+    __tablename__ = "career_fields"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # nullable for anonymous uploads
+    field_name = Column(String, nullable=False)
+    summary = Column(String, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship to skills
+    skills = relationship("UserSkill", back_populates="career_field", cascade="all, delete-orphan")
+
+# SQLAlchemy User Skill Model (to store unique skills)
+class UserSkill(Base):
+    __tablename__ = "user_skills"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)  # nullable for anonymous uploads
+    career_field_id = Column(Integer, ForeignKey("career_fields.id", ondelete="CASCADE"), nullable=True)
+    skill_name = Column(String, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Relationship
+    career_field = relationship("CareerField", back_populates="skills")
+    
+    # Unique constraint: same skill for same user should not be duplicated
+    __table_args__ = (UniqueConstraint("user_id", "skill_name", name="uix_user_skill"),)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -164,7 +195,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login", auto_error=False)
 
 # ============================================
 # Helper Functions
@@ -375,13 +406,18 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 @app.post("/extract-text")
-async def extract_text(file: UploadFile = File(...)):
+async def extract_text(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    token: Optional[str] = Depends(oauth2_scheme)
+):
     """
-    Extract text from uploaded PDF file
+    Extract text from uploaded PDF file and analyze potential career fields using LLM
     
-    - **file**: PDF file to extract text from
+    - **file**: PDF file to extract text from (e.g., resume, CV, bio)
+    - **Authorization** (optional): Bearer token for authenticated users
     
-    Returns the extracted text as JSON
+    Returns a JSON response with career fields analysis and saves to database
     """
     # Validate file type (check both content_type and filename)
     if file.content_type and file.content_type != "application/pdf":
@@ -396,6 +432,20 @@ async def extract_text(file: UploadFile = File(...)):
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File must be a PDF (.pdf extension required)"
         )
+    
+    # Try to get user if token is provided (optional authentication)
+    current_user = None
+    user_id = None
+    if token:
+        try:
+            payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+            username: str = payload.get("sub")
+            if username:
+                current_user = get_user_by_username(db, username=username)
+                if current_user:
+                    user_id = current_user.id
+        except (JWTError, Exception):
+            pass  # Continue without authentication
     
     try:
         # Read file content into memory
@@ -418,40 +468,114 @@ async def extract_text(file: UploadFile = File(...)):
                 status_code=200,
                 content={
                     "filename": file.filename,
-                    "text": "",
-                    "message": "No text found in PDF (might be scanned/image-based)",
-                    "pages": page_count
+                    "error": "No text found in PDF (might be scanned/image-based)",
+                    "pages": page_count,
+                    "career_fields": [],
+                    "overall_summary": ""
                 }
             )
         
+        # Use the career summarizer service to analyze the extracted text
+        career_analysis = await summarize_career_fields(extracted_text.strip())
+        
+        # Check if there was an error in LLM processing
+        if "error" in career_analysis and career_analysis["error"]:
+            # Return extracted text info along with error
+            return JSONResponse(
+                status_code=200,
+                content={
+                    "filename": file.filename,
+                    "pages": page_count,
+                    "characters": len(extracted_text),
+                    "error": career_analysis["error"],
+                    "career_fields": career_analysis.get("career_fields", []),
+                    "overall_summary": career_analysis.get("overall_summary", "")
+                }
+            )
+        
+        # Save career fields and skills to database (only if user is authenticated)
+        if user_id:
+            try:
+                # Collect all unique skills from all career fields
+                all_skills = set()
+                career_fields_data = career_analysis.get("career_fields", [])
+                
+                # Save each career field
+                for field_data in career_fields_data:
+                    field_name = field_data.get("field", "")
+                    summary = field_data.get("summary", "")
+                    skills = field_data.get("key_skills_mentioned", [])
+                    
+                    if field_name:
+                        # Create or get career field
+                        career_field = CareerField(
+                            user_id=user_id,
+                            field_name=field_name,
+                            summary=summary
+                        )
+                        db.add(career_field)
+                        db.flush()  # Get the ID without committing
+                        
+                        # Add skills for this career field
+                        for skill_name in skills:
+                            if skill_name and skill_name.strip():
+                                skill_name_clean = skill_name.strip()
+                                all_skills.add(skill_name_clean)
+                                
+                                # Check if this skill already exists for this user
+                                existing_skill = db.query(UserSkill).filter(
+                                    UserSkill.user_id == user_id,
+                                    UserSkill.skill_name == skill_name_clean
+                                ).first()
+                                
+                                if not existing_skill:
+                                    # Create new skill (no duplicate)
+                                    user_skill = UserSkill(
+                                        user_id=user_id,
+                                        career_field_id=career_field.id,
+                                        skill_name=skill_name_clean
+                                    )
+                                    db.add(user_skill)
+                
+                db.commit()
+            except Exception as db_error:
+                db.rollback()
+                # Log error but don't fail the request
+                print(f"Error saving to database: {str(db_error)}")
+        
+        # Return career fields analysis with file metadata
         return JSONResponse(
             status_code=200,
             content={
                 "filename": file.filename,
-                "text": extracted_text.strip(),
                 "pages": page_count,
-                "characters": len(extracted_text)
+                "characters": len(extracted_text),
+                "career_fields": career_analysis.get("career_fields", []),
+                "overall_summary": career_analysis.get("overall_summary", ""),
+                "saved_to_db": user_id is not None
             }
         )
     
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Error extracting text from PDF: {str(e)}"
+            detail=f"Error processing PDF and analyzing career fields: {str(e)}"
         )
 
 @app.get("/")
 async def root():
     """Root endpoint"""
     return {
-        "message": "User Authentication API with PDF Text Extraction",
+        "message": "User Authentication API with Career Field Analysis",
         "endpoints": {
             "register": "POST /register - Register a new user",
             "login": "POST /login - Login and get access/refresh tokens",
             "refresh": "POST /refresh - Get new access token using refresh token",
             "logout": "POST /logout - Revoke refresh token",
             "me": "GET /me - Get current user info (requires authentication)",
-            "extract-text": "POST /extract-text - Extract text from PDF file"
+            "extract-text": "POST /extract-text - Extract text from PDF and analyze potential career fields using LLM"
         }
     }
 

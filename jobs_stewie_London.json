@@ -1,0 +1,27 @@
+{
+  "user": {
+    "id": 2,
+    "username": "stewie"
+  },
+  "skills_used": [
+    "Machine Learning & AI",
+    "TensorFlow",
+    "PyTorch",
+    "Scikit-learn",
+    "SQL"
+  ],
+  "keywords": "Machine Learning & AI TensorFlow PyTorch Scikit-learn SQL",
+  "location": "London",
+  "total_jobs": 1,
+  "jobs": [
+    {
+      "title": "Machine Learning and AI Apprenticeship Coach",
+      "urn": "urn:li:fsd_jobPosting:4338801030",
+      "company": "Unknown",
+      "location": "Unknown",
+      "apply_link": "https://www.linkedin.com/jobs/view/4338801030/?trk=jobs_biz_prem_srch",
+      "description": "Machine Learning and AI Apprenticeship CoachRemote (home-based)Full time, 37.5 hrs per week\nJob purpose:\nYou will join QA as an apprenticeship coach; your focus will be to provide learners with feedback and support on Data concepts by coaching and mentoring the learners working towards the successful and timely achievement of their apprenticeship programme.\nJob Description:Coach and support a case-load of learners through their Machine Learning Engineer L6 and/or Artificial Intelligence L7 Apprenticeship.Collaborate with our internal Learning Specialists and course developers to ensure learners successfully achieve their apprenticeship programme on time.Provide clear and detailed written feedback on learning activities and goal completionSupport learners online across a variety of modules specifically helping them apply their skills to their current job roles.\nAbout you:Recent industry experience working in an AI/ML environmentExperience across the following: Python, Statistics, Machine Learning, Generative AI, Data pipelinesA technical degreePrior coaching experience or a background in apprenticeships is desirable but not essentialWorking in a fast paced, highly compliant environment",
+      "image": "https://media.licdn.com/dms/image/v2/D4E0BAQE8OXDiCrN6Nw/company-logo_100_100/B4EZnoLju_GoAQ-/0/1760536968486/qa_ltd_logo?e=1766016000&v=beta&t=nW_dbqga-pPgp4rtdN8T1uvgl0qS4kJlIJC5nk7OFNc"
+    }
+  ]
+}
