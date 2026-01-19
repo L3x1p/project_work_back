@@ -151,3 +151,4 @@ db.close()
 - The tables are created automatically when you run `main.py`
 - Or run: `python -c "from main import Base, engine; Base.metadata.create_all(bind=engine)"`
 
+
