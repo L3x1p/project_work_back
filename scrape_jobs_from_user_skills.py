@@ -17,7 +17,7 @@ from main import User, UserSkill
 # Database URL - same as in main.py
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://auth_user:Qqwerty1!@localhost:5433/auth_db"
+    "postgresql://auth_user:Qqwerty1!@25.22.135.242:5433/auth_db"
 )
 
 # LinkedIn API credentials

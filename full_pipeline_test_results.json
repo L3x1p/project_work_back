@@ -1,0 +1,532 @@
+{
+  "timestamp": "2026-01-19 15:26:38",
+  "username": "test_user_9505",
+  "steps": {
+    "registration": {
+      "id": 5,
+      "username": "test_user_9505",
+      "is_active": true
+    },
+    "login": "success",
+    "pdf_upload": {
+      "filename": "test.pdf",
+      "pages": 1,
+      "characters": 2971,
+      "career_fields": [
+        {
+          "field": "Data Science",
+          "summary": "His skills in data management, SQL, Python, and Pandas align with a career as a Data Scientist.",
+          "key_skills_mentioned": [
+            "Python",
+            "SQL"
+          ]
+        },
+        {
+          "field": "Machine Learning Engineer",
+          "summary": "His experience developing machine learning systems for secure messaging and social media behavior analysis fits well in this field.",
+          "key_skills_mentioned": [
+            "TensorFlow",
+            "PyTorch",
+            "Scikit-learn"
+          ]
+        },
+        {
+          "field": "Computer Vision",
+          "summary": "His work on inventory management, SQL optimization, and computer vision systems demonstrates potential for a career in Computer Vision.",
+          "key_skills_mentioned": [
+            "Python",
+            "SQL"
+          ]
+        }
+      ],
+      "overall_summary": "Chingiz Kuanysbay has a strong background in data science and machine learning with experience in both technical and managerial roles. He is skilled in Python, SQL, and cloud technologies like AWS and NVIDIA Triton, making him suitable for Data Science or Machine Learning Engineer positions.",
+      "saved_to_db": true
+    },
+    "job_scraping": {
+      "city": "London",
+      "max_pages": 1,
+      "career_field_search": {
+        "career_field": {
+          "id": 7,
+          "field_name": "Software Engineering",
+          "summary": "Catching the person's experience in developing, designing, and maintaining backend infrastructure, as well as building a LinkedIn parsing pipeline. These skills align with software engineering roles."
+        },
+        "keywords": "Software Engineering",
+        "jobs_found": 25,
+        "jobs": [
+          {
+            "title": "Ecommerce Service Delivery and System Operation Specialist",
+            "urn": "urn:li:fsd_jobPosting:4317379768",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Software Engineering Internship",
+            "urn": "urn:li:fsd_jobPosting:4299338933",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Campus - Apprenticeship Programme - Technology Software Engineering - London - 2026 (UK)",
+            "urn": "urn:li:fsd_jobPosting:4362981526",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "AI Deployment Strategist, Enterprise",
+            "urn": "urn:li:fsd_jobPosting:4344296163",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Developer Relations / Developer Advocate",
+            "urn": "urn:li:fsd_jobPosting:4352236674",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Software/Data Engineer - Apple Music Data Engineering",
+            "urn": "urn:li:fsd_jobPosting:4360083590",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Technical Operations",
+            "urn": "urn:li:fsd_jobPosting:4337702042",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Agile Practitioner",
+            "urn": "urn:li:fsd_jobPosting:4364055252",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": " Software Engineering Lecturer",
+            "urn": "urn:li:fsd_jobPosting:4358259933",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Developer Relations Lead",
+            "urn": "urn:li:fsd_jobPosting:4352860631",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Campus - Apprenticeship Programme - Technology Software Engineering - London - 2026 (UK)",
+            "urn": "urn:li:fsd_jobPosting:4338723636",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Software Engineering - Full Stack/backend",
+            "urn": "urn:li:fsd_jobPosting:4343679777",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "SUBJECT MATTER EXPERT - 3D Laser Scanning & Digital Twin Service",
+            "urn": "urn:li:fsd_jobPosting:4359343397",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "2026 Apprentice - Digital (Software Development) - London",
+            "urn": "urn:li:fsd_jobPosting:4328038382",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "GitHub Copilot Trainer",
+            "urn": "urn:li:fsd_jobPosting:4338949370",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Software Engineering III - Python, AI ML, Cloud",
+            "urn": "urn:li:fsd_jobPosting:4344512760",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Software Engineer - Solutions Engineering",
+            "urn": "urn:li:fsd_jobPosting:4286649031",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Research Scientist (Contractor) - CV-Camera Team",
+            "urn": "urn:li:fsd_jobPosting:3927512793",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Client Technology - Software Engineering",
+            "urn": "urn:li:fsd_jobPosting:4322072356",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "2026 Apprentice - Digital (Software Development) - London",
+            "urn": "urn:li:fsd_jobPosting:4344706087",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Software Engineering - Full Stack/backend",
+            "urn": "urn:li:fsd_jobPosting:4340313187",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Software Engineering Graduate Programme",
+            "urn": "urn:li:fsd_jobPosting:4352071473",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Full-stack Software Dev - UK or Netherlands (Remote)",
+            "urn": "urn:li:fsd_jobPosting:4359176574",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Software Engineering Full-Time Campus Hire - London",
+            "urn": "urn:li:fsd_jobPosting:4340545738",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "AI Transformation Lead",
+            "urn": "urn:li:fsd_jobPosting:4330148207",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          }
+        ]
+      },
+      "skills_search": {
+        "skills": [
+          {
+            "id": 8,
+            "skill_name": "Pandas"
+          },
+          {
+            "id": 14,
+            "skill_name": "SQL"
+          },
+          {
+            "id": 17,
+            "skill_name": "TensorFlow"
+          }
+        ],
+        "keywords": "Pandas SQL TensorFlow",
+        "jobs_found": 25,
+        "jobs": [
+          {
+            "title": "Machine Learning Engineer – AI Solutions",
+            "urn": "urn:li:fsd_jobPosting:4363818528",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "AI Engineer",
+            "urn": "urn:li:fsd_jobPosting:4328052903",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Machine Learning Engineer Intern",
+            "urn": "urn:li:fsd_jobPosting:4343431140",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Python Developer | Remote",
+            "urn": "urn:li:fsd_jobPosting:4359076942",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "AI Developer",
+            "urn": "urn:li:fsd_jobPosting:4354943889",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Medical AI Data Engineer (Medical AI start-up)",
+            "urn": "urn:li:fsd_jobPosting:4361360063",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "AI Engineer – HealthTech Start-up",
+            "urn": "urn:li:fsd_jobPosting:4330526696",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Data Scientist Intern - London - Descartes Underwriting",
+            "urn": "urn:li:fsd_jobPosting:4360863381",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Junior Data Scientist",
+            "urn": "urn:li:fsd_jobPosting:4362389780",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Artificial Intelligence Engineer",
+            "urn": "urn:li:fsd_jobPosting:4364302273",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Python Developer",
+            "urn": "urn:li:fsd_jobPosting:4359027727",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Junior Data Engineer",
+            "urn": "urn:li:fsd_jobPosting:4345935646",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Data Engineering Intern",
+            "urn": "urn:li:fsd_jobPosting:4360750852",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "AI Engineer",
+            "urn": "urn:li:fsd_jobPosting:4361161885",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Graduate Artificial Intelligence Engineer",
+            "urn": "urn:li:fsd_jobPosting:4346242978",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Python Developer",
+            "urn": "urn:li:fsd_jobPosting:4364093475",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "AI Engineer",
+            "urn": "urn:li:fsd_jobPosting:4351229802",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Data Science Internship",
+            "urn": "urn:li:fsd_jobPosting:4352055435",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Artificial Intelligence Engineer",
+            "urn": "urn:li:fsd_jobPosting:4362964479",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Artificial Intelligence Engineer",
+            "urn": "urn:li:fsd_jobPosting:4363800055",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Machine Learning Engineer | Python | Pytorch | Natural Language Processing | LLM | Large Language Models | Remote, Europe",
+            "urn": "urn:li:fsd_jobPosting:4360464574",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "Machine Learning - Computer Vision ",
+            "urn": "urn:li:fsd_jobPosting:4362330464",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "AI/ML Engineer Intern",
+            "urn": "urn:li:fsd_jobPosting:4325252501",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "AI Engineer",
+            "urn": "urn:li:fsd_jobPosting:4353660910",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          },
+          {
+            "title": "AI Engineer",
+            "urn": "urn:li:fsd_jobPosting:4338788411",
+            "company": "Unknown",
+            "location": "Unknown",
+            "apply_link": "",
+            "description": "",
+            "image": ""
+          }
+        ]
+      },
+      "total_jobs": 50
+    }
+  }
+}

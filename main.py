@@ -8,13 +8,16 @@ from sqlalchemy.orm import sessionmaker, Session, relationship
 from sqlalchemy.ext.mutable import MutableList
 from pydantic import BaseModel, EmailStr
 from passlib.context import CryptContext
+import bcrypt
 from jose import JWTError, jwt
 from datetime import datetime, timedelta
 import os
-from typing import Optional
+from typing import Optional, List
 import pdfplumber
 from io import BytesIO
+import random
 from career_summarizer_service import summarize_career_fields
+from linkedin_scraper import scrape_jobs
 
 # ============================================
 # Configuration
@@ -23,7 +26,7 @@ from career_summarizer_service import summarize_career_fields
 # Database URL - update with your PostgreSQL credentials
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://auth_user:Qqwerty1!@localhost:5433/auth_db"
+    "postgresql://auth_user:Qqwerty1!@25.22.135.242:5433/auth_db"
 )
 
 # JWT Settings
@@ -36,7 +39,12 @@ REFRESH_TOKEN_EXPIRE_DAYS = 7  # Refresh tokens last 7 days
 # Database Setup
 # ============================================
 
-engine = create_engine(DATABASE_URL)
+# Create engine with connection timeout for better error handling
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"connect_timeout": 10},  # 10 second timeout
+    pool_pre_ping=True  # Verify connections before using them
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -95,15 +103,38 @@ Base.metadata.create_all(bind=engine)
 # Password Hashing
 # ============================================
 
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+# Use bcrypt with explicit rounds to avoid version issues
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto",
+    bcrypt__rounds=12  # Explicitly set rounds
+)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its hash"""
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against its hash using bcrypt directly"""
+    # Bcrypt has a 72 byte limit, so truncate if necessary
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    
+    # Use bcrypt directly to avoid passlib version issues
+    try:
+        return bcrypt.checkpw(password_bytes, hashed_password.encode('utf-8'))
+    except Exception:
+        # Fallback to passlib if direct bcrypt fails
+        return pwd_context.verify(plain_password, hashed_password)
 
 def get_password_hash(password: str) -> str:
-    """Hash a password"""
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt directly to avoid passlib issues"""
+    # Bcrypt has a 72 byte limit, so truncate if necessary
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        password_bytes = password_bytes[:72]
+    
+    # Use bcrypt directly to avoid passlib version issues
+    salt = bcrypt.gensalt(rounds=12)
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 # ============================================
 # JWT Token Functions
@@ -564,6 +595,79 @@ async def extract_text(
             detail=f"Error processing PDF and analyzing career fields: {str(e)}"
         )
 
+@app.get("/scrape-jobs")
+async def scrape_jobs_endpoint(
+    city: str,
+    max_pages: int = 1,
+    db: Session = Depends(get_db)
+):
+    """
+    Scrape LinkedIn jobs based on random career field and random skills from database.
+    
+    - **city**: City name for job search (e.g., "New York", "London", "San Francisco")
+    - **max_pages**: Maximum number of pages to scrape (default: 1, max: 3)
+    
+    Returns jobs found using:
+    1. A random career field from database
+    2. Random skills from database
+    """
+    if max_pages > 3:
+        max_pages = 3
+    if max_pages < 1:
+        max_pages = 1
+    
+    # Get random career field
+    career_fields = db.query(CareerField).filter(CareerField.field_name.isnot(None)).all()
+    if not career_fields:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No career fields found in database. Please upload PDFs first."
+        )
+    
+    random_career_field = random.choice(career_fields)
+    career_field_keywords = random_career_field.field_name
+    
+    # Get random skills
+    all_skills = db.query(UserSkill).filter(UserSkill.skill_name.isnot(None)).all()
+    if not all_skills:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No skills found in database. Please upload PDFs first."
+        )
+    
+    # Get 3-5 random skills
+    num_skills = min(random.randint(3, 5), len(all_skills))
+    random_skills = random.sample(all_skills, num_skills)
+    skills_keywords = " ".join([skill.skill_name for skill in random_skills])
+    
+    # Scrape jobs using career field
+    jobs_by_career_field = await scrape_jobs(career_field_keywords, city, max_pages)
+    
+    # Scrape jobs using skills
+    jobs_by_skills = await scrape_jobs(skills_keywords, city, max_pages)
+    
+    return {
+        "city": city,
+        "max_pages": max_pages,
+        "career_field_search": {
+            "career_field": {
+                "id": random_career_field.id,
+                "field_name": random_career_field.field_name,
+                "summary": random_career_field.summary
+            },
+            "keywords": career_field_keywords,
+            "jobs_found": len(jobs_by_career_field),
+            "jobs": jobs_by_career_field
+        },
+        "skills_search": {
+            "skills": [{"id": skill.id, "skill_name": skill.skill_name} for skill in random_skills],
+            "keywords": skills_keywords,
+            "jobs_found": len(jobs_by_skills),
+            "jobs": jobs_by_skills
+        },
+        "total_jobs": len(jobs_by_career_field) + len(jobs_by_skills)
+    }
+
 @app.get("/")
 async def root():
     """Root endpoint"""
@@ -575,7 +679,8 @@ async def root():
             "refresh": "POST /refresh - Get new access token using refresh token",
             "logout": "POST /logout - Revoke refresh token",
             "me": "GET /me - Get current user info (requires authentication)",
-            "extract-text": "POST /extract-text - Extract text from PDF and analyze potential career fields using LLM"
+            "extract-text": "POST /extract-text - Extract text from PDF and analyze potential career fields using LLM",
+            "scrape-jobs": "GET /scrape-jobs?city=<city>&max_pages=<pages> - Scrape LinkedIn jobs using random career field and skills"
         }
     }
 

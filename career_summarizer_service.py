@@ -9,7 +9,7 @@ import httpx
 from typing import Optional
 
 # LLaMA Chat API base URL
-LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://localhost:8002")
+LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://25.22.135.242:8002")
 
 CAREER_FIELD_SUMMARIZER_INSTRUCTION = """You are a Career Analysis Assistant.
 Your task is to analyze the provided text about a person and identify their main potential career fields.
