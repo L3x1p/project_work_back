@@ -147,3 +147,4 @@ async def scrape_jobs(keywords: str, place: str, max_pages: int = 1) -> List[Dic
         await asyncio.sleep(1)
     
     return jobs
+

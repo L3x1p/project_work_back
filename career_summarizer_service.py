@@ -42,6 +42,41 @@ Your response should be in the following JSON format:
 
 Return ONLY valid JSON, no additional text."""
 
+def _extract_first_json_object(text: str) -> Optional[str]:
+    """
+    Extract the first top-level JSON object from a string using brace balancing.
+    This is more robust than regex when the model returns extra text or multiple JSON blobs.
+    """
+    if not text:
+        return None
+    start = text.find("{")
+    if start == -1:
+        return None
+    depth = 0
+    in_string = False
+    escape = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            continue
+        else:
+            if ch == '"':
+                in_string = True
+                continue
+            if ch == "{":
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0:
+                    return text[start : i + 1]
+    return None
+
 
 async def summarize_career_fields(text: str) -> dict:
     """
@@ -106,10 +141,10 @@ Analyze the following text and identify potential career fields:
                 "overall_summary": ""
             }
         
-        # Try to extract JSON from the response (in case there's extra text)
-        json_match = re.search(r'\{.*\}', answer_text, re.DOTALL)
-        if json_match:
-            answer_text = json_match.group(0)
+        # Try to extract the first JSON object from the response (in case there's extra text)
+        extracted_json = _extract_first_json_object(answer_text)
+        if extracted_json:
+            answer_text = extracted_json
         
         # Parse JSON
         try:

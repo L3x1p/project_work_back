@@ -17,7 +17,9 @@ from typing import Optional, List
 import pdfplumber
 from io import BytesIO
 import random
-from career_summarizer_service import summarize_career_fields
+import httpx
+
+from career_summarizer_service import summarize_career_fields, LLAMA_CHAT_API_URL
 from linkedin_scraper import scrape_jobs
 
 # ============================================
@@ -236,6 +238,16 @@ class TokenRefresh(BaseModel):
 class TokenData(BaseModel):
     """Model for token data"""
     username: Optional[str] = None
+
+
+class CareerChatRequest(BaseModel):
+    """Request model for career chat with LLM"""
+    message: str
+
+
+class CareerChatResponse(BaseModel):
+    """Response model for career chat"""
+    answer: str
 
 
 class FavoritePositionCreate(BaseModel):
@@ -557,6 +569,95 @@ async def list_favorite_positions(
         .all()
     )
     return favorites
+
+
+@app.post("/career-chat", response_model=CareerChatResponse)
+async def career_chat(
+    chat_req: CareerChatRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Chat with the career coach LLM using the user's stored career fields & skills as context.
+
+    Frontend: send the latest user message, backend will return a single `answer` string.
+    Conversation history (if needed) should be managed on the frontend and included in the message.
+    """
+    # Load user's latest career fields and skills to give context to the LLM
+    career_fields = (
+        db.query(CareerField)
+        .filter(CareerField.user_id == current_user.id)
+        .order_by(CareerField.created_at.desc())
+        .limit(5)
+        .all()
+    )
+
+    skills = (
+        db.query(UserSkill)
+        .filter(UserSkill.user_id == current_user.id)
+        .all()
+    )
+
+    unique_skills = sorted({s.skill_name for s in skills if s.skill_name})
+
+    # Build profile context
+    profile_lines = []
+    if career_fields:
+        profile_lines.append("User career fields:")
+        for cf in career_fields:
+            profile_lines.append(f"- {cf.field_name}: {cf.summary or ''}")
+    if unique_skills:
+        profile_lines.append("\nUser skills: " + ", ".join(unique_skills[:30]))
+
+    profile_context = "\n".join(profile_lines) if profile_lines else "No stored profile data yet."
+
+    system_instruction = (
+        "You are a helpful career coach focusing especially on data analytics, data science, and related roles.\n"
+        "The user will ask follow-up questions about their profile and what to change or learn.\n"
+        "Give concrete, actionable advice (skills to learn, projects to build, changes to CV, etc.).\n"
+        "Keep answers short and practical (3–7 bullet points)."
+    )
+
+    prompt = (
+        f"{system_instruction}\n\n"
+        f"User profile:\n{profile_context}\n\n"
+        f"User question:\n{chat_req.message}"
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
+            resp = await client.post(
+                f"{LLAMA_CHAT_API_URL}/chat",
+                json={
+                    "message": prompt,
+                    "temperature": 0.7,
+                    "max_tokens": 600,
+                    "top_p": 0.9,
+                },
+                headers={"Content-Type": "application/json"},
+            )
+            resp.raise_for_status()
+            result = resp.json()
+
+        answer_text = result.get("response", "").strip()
+        if not answer_text:
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="LLM returned an empty response",
+            )
+
+        return CareerChatResponse(answer=answer_text)
+
+    except httpx.TimeoutException:
+        raise HTTPException(
+            status_code=status.HTTP_504_GATEWAY_TIMEOUT,
+            detail="Timeout while talking to LLM service",
+        )
+    except httpx.HTTPError as e:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"Error talking to LLM service: {str(e)}",
+        )
 @app.post("/extract-text")
 async def extract_text(
     file: UploadFile = File(...),
