@@ -1,7 +1,8 @@
 from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, ForeignKey, JSON, UniqueConstraint
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
@@ -95,6 +96,31 @@ class UserSkill(Base):
     
     # Unique constraint: same skill for same user should not be duplicated
     __table_args__ = (UniqueConstraint("user_id", "skill_name", name="uix_user_skill"),)
+
+
+class FavoritePosition(Base):
+    """
+    SQLAlchemy model to store user's favorite job positions.
+    
+    We store minimal job information plus the LinkedIn job URN/apply link
+    so the frontend can reconstruct the card later.
+    """
+    __tablename__ = "favorite_positions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+
+    title = Column(String, nullable=False)
+    urn = Column(String, nullable=True, index=True)
+    company = Column(String, nullable=True)
+    location = Column(String, nullable=True)
+    apply_link = Column(String, nullable=True)
+    source = Column(String, nullable=True)  # e.g. "career_field" or "skills"
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Prevent duplicate favorites for the same user & job (by URN)
+    __table_args__ = (UniqueConstraint("user_id", "urn", name="uix_user_favorite_urn"),)
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -210,6 +236,31 @@ class TokenRefresh(BaseModel):
 class TokenData(BaseModel):
     """Model for token data"""
     username: Optional[str] = None
+
+
+class FavoritePositionCreate(BaseModel):
+    """Payload for creating a favorite job position"""
+    title: str
+    urn: Optional[str] = None
+    company: Optional[str] = None
+    location: Optional[str] = None
+    apply_link: Optional[str] = None
+    source: Optional[str] = None
+
+
+class FavoritePositionResponse(BaseModel):
+    """Response model for a favorite job position"""
+    id: int
+    title: str
+    urn: Optional[str] = None
+    company: Optional[str] = None
+    location: Optional[str] = None
+    apply_link: Optional[str] = None
+    source: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 # ============================================
 # FastAPI App
@@ -436,6 +487,76 @@ async def read_users_me(current_user: User = Depends(get_current_user)):
     """
     return current_user
 
+
+@app.post("/favorites", response_model=FavoritePositionResponse, status_code=status.HTTP_201_CREATED)
+async def add_favorite_position(
+    favorite: FavoritePositionCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Save a job position to the current user's favorites.
+
+    Expects job data from the frontend (usually taken from `/scrape-jobs` results).
+    """
+    # Require at least a title and some unique identifier
+    if not favorite.title.strip():
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Job title is required",
+        )
+    if not favorite.urn and not favorite.apply_link:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Either 'urn' or 'apply_link' must be provided to identify the job",
+        )
+
+    # Check for existing favorite for this user & urn (idempotent behavior)
+    existing = None
+    if favorite.urn:
+        existing = (
+            db.query(FavoritePosition)
+            .filter(
+                FavoritePosition.user_id == current_user.id,
+                FavoritePosition.urn == favorite.urn,
+            )
+            .first()
+        )
+    if existing:
+        # Return existing favorite instead of creating duplicate
+        return existing
+
+    db_fav = FavoritePosition(
+        user_id=current_user.id,
+        title=favorite.title.strip(),
+        urn=favorite.urn,
+        company=favorite.company,
+        location=favorite.location,
+        apply_link=favorite.apply_link,
+        source=favorite.source,
+    )
+    db.add(db_fav)
+    db.commit()
+    db.refresh(db_fav)
+
+    return db_fav
+
+
+@app.get("/favorites", response_model=List[FavoritePositionResponse])
+async def list_favorite_positions(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get all favorite job positions for the current user.
+    """
+    favorites = (
+        db.query(FavoritePosition)
+        .filter(FavoritePosition.user_id == current_user.id)
+        .order_by(FavoritePosition.created_at.desc())
+        .all()
+    )
+    return favorites
 @app.post("/extract-text")
 async def extract_text(
     file: UploadFile = File(...),
@@ -668,9 +789,35 @@ async def scrape_jobs_endpoint(
         "total_jobs": len(jobs_by_career_field) + len(jobs_by_skills)
     }
 
-@app.get("/")
+@app.get("/", response_class=HTMLResponse)
 async def root():
-    """Root endpoint"""
+    """Serve the HTML frontend"""
+    try:
+        return FileResponse("index.html")
+    except FileNotFoundError:
+        return HTMLResponse("""
+        <html>
+            <head><title>API Running</title></head>
+            <body>
+                <h1>User Authentication API with Career Field Analysis</h1>
+                <p>API is running. Use <a href="/docs">/docs</a> for API documentation.</p>
+                <p>Endpoints:</p>
+                <ul>
+                    <li>POST /register - Register a new user</li>
+                    <li>POST /login - Login and get access/refresh tokens</li>
+                    <li>POST /refresh - Get new access token using refresh token</li>
+                    <li>POST /logout - Revoke refresh token</li>
+                    <li>GET /me - Get current user info (requires authentication)</li>
+                    <li>POST /extract-text - Extract text from PDF and analyze potential career fields using LLM</li>
+                    <li>GET /scrape-jobs?city=&lt;city&gt;&max_pages=&lt;pages&gt; - Scrape LinkedIn jobs using random career field and skills</li>
+                </ul>
+            </body>
+        </html>
+        """)
+
+@app.get("/api")
+async def api_info():
+    """API information endpoint"""
     return {
         "message": "User Authentication API with Career Field Analysis",
         "endpoints": {

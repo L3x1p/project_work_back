@@ -413,8 +413,8 @@
             console.log('FormData created, sending request...');
 
             try {
-                console.log('Fetching to: http://localhost:8000/extract-text');
-                const response = await fetch('http://localhost:8000/extract-text', {
+                console.log('Fetching to: http://localhost:8002/extract-text');
+                const response = await fetch('http://localhost:8002/extract-text', {
                     method: 'POST',
                     body: formData
                 });
@@ -446,7 +446,7 @@
                 console.error('Error:', err);
                 loading.classList.remove('show');
                 extractBtn.disabled = false;
-                showError('Network error: ' + err.message + '. Make sure the server is running on http://localhost:8000');
+                showError('Network error: ' + err.message + '. Make sure the server is running on http://localhost:8002');
             }
         });
 
