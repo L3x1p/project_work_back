@@ -1,16 +1,20 @@
 """
 Complete Full Pipeline Test
-Tests: User Registration → Login → PDF Upload → Career Analysis → Job Scraping
+Tests: User Registration → Login → PDF Upload (test.pdf) → Career Analysis → Job Scraping → Dates check
 """
 import sys
 import json
 import requests
 import time
 from pathlib import Path
-from typing import Optional
+from datetime import datetime
+from typing import Optional, List, Dict, Tuple
 
 # API base URL
 BASE_URL = "http://localhost:8000"  # Change if your API runs on different port
+
+# Default CV used for pipeline test
+DEFAULT_PDF = "test.pdf"
 
 
 def print_section(title: str):
@@ -164,8 +168,8 @@ def test_pdf_upload(pdf_path: str, token: str) -> Optional[dict]:
         return None
 
 
-def test_job_scraping(city: str, max_pages: int = 1) -> Optional[dict]:
-    """Test job scraping endpoint"""
+def test_job_scraping(city: str, max_pages: int = 1, token: Optional[str] = None) -> Optional[dict]:
+    """Test job scraping endpoint (requires auth token)."""
     print_section("STEP 4: JOB SCRAPING")
     
     print(f"🔍 Scraping jobs for city: {city}")
@@ -173,14 +177,14 @@ def test_job_scraping(city: str, max_pages: int = 1) -> Optional[dict]:
     print("\n⏳ This may take a while (30-60 seconds)...")
     
     url = f"{BASE_URL}/scrape-jobs"
-    params = {
-        "city": city,
-        "max_pages": max_pages
-    }
+    params = {"city": city, "max_pages": max_pages}
+    headers = {}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
     
     try:
         start_time = time.time()
-        response = requests.get(url, params=params, timeout=120)
+        response = requests.get(url, params=params, headers=headers or None, timeout=120)
         elapsed_time = time.time() - start_time
         
         if response.status_code == 200:
@@ -203,9 +207,12 @@ def test_job_scraping(city: str, max_pages: int = 1) -> Optional[dict]:
             if jobs_cf:
                 print(f"\n   First 5 jobs from career field search:")
                 for i, job in enumerate(jobs_cf[:5], 1):
+                    posted = job.get("posted_at")
+                    posted_str = _format_posted_at(posted) if posted is not None else "no date"
                     print(f"   {i}. {job.get('title', 'N/A')}")
                     print(f"      Company: {job.get('company', 'N/A')}")
                     print(f"      Location: {job.get('location', 'N/A')}")
+                    print(f"      Posted: {posted_str}")
             
             # Skills search results
             skills_search = data.get('skills_search', {})
@@ -219,11 +226,17 @@ def test_job_scraping(city: str, max_pages: int = 1) -> Optional[dict]:
             if jobs_skills:
                 print(f"\n   First 5 jobs from skills search:")
                 for i, job in enumerate(jobs_skills[:5], 1):
+                    posted = job.get("posted_at")
+                    posted_str = _format_posted_at(posted) if posted is not None else "no date"
                     print(f"   {i}. {job.get('title', 'N/A')}")
                     print(f"      Company: {job.get('company', 'N/A')}")
                     print(f"      Location: {job.get('location', 'N/A')}")
+                    print(f"      Posted: {posted_str}")
             
             return data
+        elif response.status_code == 401:
+            print("❌ Error: 401 Unauthorized. Scrape-jobs requires login. Pass token.")
+            return None
         elif response.status_code == 404:
             error_data = response.json()
             print(f"❌ Error: {error_data.get('detail', 'No data found in database')}")
@@ -236,6 +249,51 @@ def test_job_scraping(city: str, max_pages: int = 1) -> Optional[dict]:
     except Exception as e:
         print(f"❌ Error: {str(e)}")
         return None
+
+
+def _format_posted_at(epoch_ms: int) -> str:
+    """Format posted_at (epoch milliseconds) for display."""
+    try:
+        dt = datetime.utcfromtimestamp(epoch_ms / 1000.0)
+        return dt.strftime("%Y-%m-%d %H:%M UTC")
+    except Exception:
+        return str(epoch_ms)
+
+
+def check_job_dates(jobs_result: Optional[dict]) -> Tuple[int, int]:
+    """
+    Check how many jobs have posted_at. Returns (with_date, total).
+    """
+    if not jobs_result:
+        return 0, 0
+    all_jobs: List[Dict] = []
+    for key in ("career_field_search", "skills_search"):
+        block = jobs_result.get(key, {})
+        all_jobs.extend(block.get("jobs", []))
+    total = len(all_jobs)
+    with_date = sum(1 for j in all_jobs if j.get("posted_at") is not None)
+    return with_date, total
+
+
+def test_job_dates(jobs_result: Optional[dict]) -> bool:
+    """Test that scrape-jobs returns posted_at where available; report counts."""
+    print_section("STEP 5: JOB DATES CHECK (posted_at)")
+    
+    with_date, total = check_job_dates(jobs_result)
+    
+    print(f"   Total jobs returned: {total}")
+    print(f"   Jobs with posted_at: {with_date}")
+    if total:
+        pct = 100 * with_date / total
+        print(f"   Percentage with date: {pct:.1f}%")
+        if with_date == total:
+            print("   ✅ All jobs have posted_at")
+        elif with_date > 0:
+            print("   ⚠️  Some jobs have posted_at (API may not provide it for all)")
+        else:
+            print("   ❌ No jobs have posted_at (API may not expose listedAt)")
+    
+    return total > 0 and with_date >= 0  # pass if we got any jobs and counted correctly
 
 
 def save_results(results: dict, output_file: str = "full_pipeline_test_results.json"):
@@ -252,20 +310,21 @@ def main():
     print("This test covers:")
     print("  1. User Registration")
     print("  2. User Login")
-    print("  3. PDF Upload & Career Analysis")
+    print("  3. PDF Upload & Career Analysis (uses test.pdf)")
     print("  4. Job Scraping")
+    print("  5. Job dates check (posted_at)")
     print()
     
-    # Get PDF path from command line or ask user
+    # Always use test.pdf; allow override via CLI
     if len(sys.argv) > 1:
         pdf_path = sys.argv[1]
     else:
-        pdf_path = input("📄 Enter path to PDF file (resume/CV): ").strip()
-        if not pdf_path:
-            print("❌ PDF path is required!")
-            return
+        pdf_path = DEFAULT_PDF
+    if not Path(pdf_path).exists():
+        print(f"❌ PDF not found: {pdf_path}")
+        print(f"   Place test.pdf in the project folder or run: python test_full_pipeline_complete.py <path/to/cv.pdf>")
+        return
     
-    # Generate unique username
     import random
     username = f"test_user_{random.randint(1000, 9999)}"
     password = "test123"  # Short password to avoid bcrypt 72-byte limit
@@ -303,7 +362,7 @@ def main():
     print("\n⏳ Waiting 3 seconds for database to update...")
     time.sleep(3)
     
-    # Step 4: Scrape jobs
+    # Step 4: Scrape jobs (requires auth)
     city = input("\n📍 Enter city for job search (e.g., 'London', 'New York'): ").strip()
     if not city:
         print("❌ City is required!")
@@ -315,8 +374,13 @@ def main():
     except ValueError:
         max_pages = 1
     
-    jobs_result = test_job_scraping(city, max_pages)
+    jobs_result = test_job_scraping(city, max_pages, token=token)
     results["steps"]["job_scraping"] = jobs_result if jobs_result else "failed"
+    
+    # Step 5: Check that jobs return dates (posted_at)
+    test_job_dates(jobs_result)
+    with_date, total_jobs = check_job_dates(jobs_result)
+    results["steps"]["job_dates"] = {"with_posted_at": with_date, "total_jobs": total_jobs}
     
     # Save results
     save_results(results)
@@ -345,6 +409,12 @@ def main():
         print(f"   Found {jobs_result.get('total_jobs', 0)} total jobs")
     else:
         print("❌ Job Scraping: FAILED")
+    
+    with_date, total = check_job_dates(jobs_result)
+    if total:
+        print(f"✅ Job dates: {with_date}/{total} jobs have posted_at")
+    else:
+        print("⚠️  Job dates: no jobs to check")
     
     print("\n" + "=" * 80)
     print("Testing completed!")

@@ -821,40 +821,56 @@ async def extract_text(
 async def scrape_jobs_endpoint(
     city: str,
     max_pages: int = 1,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     """
-    Scrape LinkedIn jobs based on random career field and random skills from database.
+    Scrape LinkedIn jobs based on the current user's career fields and skills only.
+    Requires authentication. Uses only this user's CV-derived data.
     
     - **city**: City name for job search (e.g., "New York", "London", "San Francisco")
     - **max_pages**: Maximum number of pages to scrape (default: 1, max: 3)
     
     Returns jobs found using:
-    1. A random career field from database
-    2. Random skills from database
+    1. A random career field from this user's profile
+    2. Random skills from this user's profile
     """
     if max_pages > 3:
         max_pages = 3
     if max_pages < 1:
         max_pages = 1
     
-    # Get random career field
-    career_fields = db.query(CareerField).filter(CareerField.field_name.isnot(None)).all()
+    # Get random career field for this user only
+    career_fields = (
+        db.query(CareerField)
+        .filter(
+            CareerField.user_id == current_user.id,
+            CareerField.field_name.isnot(None),
+        )
+        .all()
+    )
     if not career_fields:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No career fields found in database. Please upload PDFs first."
+            detail="No career fields found for your profile. Please upload a PDF (CV) first."
         )
     
     random_career_field = random.choice(career_fields)
     career_field_keywords = random_career_field.field_name
     
-    # Get random skills
-    all_skills = db.query(UserSkill).filter(UserSkill.skill_name.isnot(None)).all()
+    # Get random skills for this user only
+    all_skills = (
+        db.query(UserSkill)
+        .filter(
+            UserSkill.user_id == current_user.id,
+            UserSkill.skill_name.isnot(None),
+        )
+        .all()
+    )
     if not all_skills:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail="No skills found in database. Please upload PDFs first."
+            detail="No skills found for your profile. Please upload a PDF (CV) first."
         )
     
     # Get 3-5 random skills
@@ -871,6 +887,7 @@ async def scrape_jobs_endpoint(
     return {
         "city": city,
         "max_pages": max_pages,
+        "user_id": current_user.id,
         "career_field_search": {
             "career_field": {
                 "id": random_career_field.id,
