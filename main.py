@@ -124,6 +124,18 @@ class FavoritePosition(Base):
     # Prevent duplicate favorites for the same user & job (by URN)
     __table_args__ = (UniqueConstraint("user_id", "urn", name="uix_user_favorite_urn"),)
 
+
+class CareerChatMessage(Base):
+    """Stores career chat history per user (user + assistant messages)."""
+    __tablename__ = "career_chat_messages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    role = Column(String(20), nullable=False)  # 'user' | 'assistant'
+    content = Column(String, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
 # Create tables
 Base.metadata.create_all(bind=engine)
 
@@ -248,6 +260,17 @@ class CareerChatRequest(BaseModel):
 class CareerChatResponse(BaseModel):
     """Response model for career chat"""
     answer: str
+
+
+class ChatMessageResponse(BaseModel):
+    """One message in chat history"""
+    id: int
+    role: str
+    content: str
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class FavoritePositionCreate(BaseModel):
@@ -571,6 +594,69 @@ async def list_favorite_positions(
     return favorites
 
 
+@app.delete("/favorites/{favorite_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_favorite_position(
+    favorite_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Remove a job from the current user's favorites (unfavorite).
+    Returns 204 No Content on success. Returns 404 if the favorite does not exist or belongs to another user.
+    """
+    fav = (
+        db.query(FavoritePosition)
+        .filter(
+            FavoritePosition.id == favorite_id,
+            FavoritePosition.user_id == current_user.id,
+        )
+        .first()
+    )
+    if not fav:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Favorite not found or you do not have permission to remove it.",
+        )
+    db.delete(fav)
+    db.commit()
+    return None
+
+
+# Max number of previous messages to send to LLM (to avoid token limits)
+CAREER_CHAT_HISTORY_LIMIT = 20
+
+
+@app.get("/career-chat/history", response_model=List[ChatMessageResponse])
+async def get_career_chat_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Get chat history for the current user. Returns messages in chronological order.
+    Frontend can call this on page load so the conversation persists after refresh.
+    """
+    messages = (
+        db.query(CareerChatMessage)
+        .filter(CareerChatMessage.user_id == current_user.id)
+        .order_by(CareerChatMessage.created_at.asc())
+        .all()
+    )
+    return messages
+
+
+@app.delete("/career-chat/history", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_career_chat_history(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Delete all chat history for the current user. Returns 204 No Content on success.
+    """
+    db.query(CareerChatMessage).filter(CareerChatMessage.user_id == current_user.id).delete()
+    db.commit()
+    return None
+
+
 @app.post("/career-chat", response_model=CareerChatResponse)
 async def career_chat(
     chat_req: CareerChatRequest,
@@ -578,12 +664,10 @@ async def career_chat(
     current_user: User = Depends(get_current_user),
 ):
     """
-    Chat with the career coach LLM using the user's stored career fields & skills as context.
-
-    Frontend: send the latest user message, backend will return a single `answer` string.
-    Conversation history (if needed) should be managed on the frontend and included in the message.
+    Chat with the career coach LLM. Uses saved profile (CV) data and previous chat history.
+    Each user message and assistant reply are saved so history survives refresh.
     """
-    # Load user's latest career fields and skills to give context to the LLM
+    # Load user's career fields and skills (CV context)
     career_fields = (
         db.query(CareerField)
         .filter(CareerField.user_id == current_user.id)
@@ -591,16 +675,13 @@ async def career_chat(
         .limit(5)
         .all()
     )
-
     skills = (
         db.query(UserSkill)
         .filter(UserSkill.user_id == current_user.id)
         .all()
     )
-
     unique_skills = sorted({s.skill_name for s in skills if s.skill_name})
 
-    # Build profile context
     profile_lines = []
     if career_fields:
         profile_lines.append("User career fields:")
@@ -608,8 +689,17 @@ async def career_chat(
             profile_lines.append(f"- {cf.field_name}: {cf.summary or ''}")
     if unique_skills:
         profile_lines.append("\nUser skills: " + ", ".join(unique_skills[:30]))
-
     profile_context = "\n".join(profile_lines) if profile_lines else "No stored profile data yet."
+
+    # Load previous chat history (last N messages)
+    history_rows = (
+        db.query(CareerChatMessage)
+        .filter(CareerChatMessage.user_id == current_user.id)
+        .order_by(CareerChatMessage.created_at.desc())
+        .limit(CAREER_CHAT_HISTORY_LIMIT)
+        .all()
+    )
+    history_rows = list(reversed(history_rows))  # chronological for prompt
 
     system_instruction = (
         "You are a helpful career coach focusing especially on data analytics, data science, and related roles.\n"
@@ -618,11 +708,24 @@ async def career_chat(
         "Keep answers short and practical (3–7 bullet points)."
     )
 
-    prompt = (
-        f"{system_instruction}\n\n"
-        f"User profile:\n{profile_context}\n\n"
-        f"User question:\n{chat_req.message}"
-    )
+    # Build single prompt: system + profile + conversation history + new user message
+    prompt_parts = [
+        system_instruction,
+        "",
+        "User profile (CV):",
+        profile_context,
+        "",
+    ]
+    if history_rows:
+        prompt_parts.append("Previous conversation:")
+        for m in history_rows:
+            label = "User" if m.role == "user" else "Assistant"
+            prompt_parts.append(f"{label}: {m.content}")
+        prompt_parts.append("")
+    prompt_parts.append("User:")
+    prompt_parts.append(chat_req.message)
+
+    prompt = "\n".join(prompt_parts)
 
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
@@ -645,6 +748,22 @@ async def career_chat(
                 status_code=status.HTTP_502_BAD_GATEWAY,
                 detail="LLM returned an empty response",
             )
+
+        # Save user message and assistant reply to DB
+        user_msg = CareerChatMessage(
+            user_id=current_user.id,
+            role="user",
+            content=chat_req.message.strip(),
+        )
+        db.add(user_msg)
+        db.flush()
+        assistant_msg = CareerChatMessage(
+            user_id=current_user.id,
+            role="assistant",
+            content=answer_text,
+        )
+        db.add(assistant_msg)
+        db.commit()
 
         return CareerChatResponse(answer=answer_text)
 
