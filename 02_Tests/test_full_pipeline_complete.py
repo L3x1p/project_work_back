@@ -1,6 +1,6 @@
 """
 Complete Full Pipeline Test
-Tests: User Registration → Login → PDF Upload (test.pdf) → Career Analysis → Job Scraping → Dates check
+02_Tests: User Registration → Login → PDF Upload (test.pdf) → Career Analysis → Job Scraping → Dates check
 """
 import sys
 import json

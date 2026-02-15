@@ -8,10 +8,15 @@ from sqlalchemy.orm import sessionmaker
 from main import User, CareerField, UserSkill, RefreshToken
 
 # Database URL - same as in main.py
+#DATABASE_URL = os.getenv(
+#     "DATABASE_URL",
+#    "postgresql://auth_user:Qqwerty1!@localhost:5432/auth_db"
+#)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://auth_user:Qqwerty1!@localhost:5433/auth_db"
+    "postgresql://postgres:postgres@localhost:5432/postgres"
 )
+
 
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -27,7 +32,7 @@ def view_database():
         
         # Users
         users = db.query(User).all()
-        print(f"\n📊 USERS ({len(users)} total):")
+        print(f"\n? USERS ({len(users)} total):")
         print("-" * 80)
         if users:
             for user in users:
@@ -40,7 +45,7 @@ def view_database():
         
         # Refresh Tokens
         tokens = db.query(RefreshToken).all()
-        print(f"\n🔑 REFRESH TOKENS ({len(tokens)} total):")
+        print(f"\n? REFRESH TOKENS ({len(tokens)} total):")
         print("-" * 80)
         if tokens:
             for token in tokens:
@@ -55,7 +60,7 @@ def view_database():
         
         # Career Fields
         career_fields = db.query(CareerField).all()
-        print(f"\n💼 CAREER FIELDS ({len(career_fields)} total):")
+        print(f"\n? CAREER FIELDS ({len(career_fields)} total):")
         print("-" * 80)
         if career_fields:
             for field in career_fields:
@@ -73,7 +78,7 @@ def view_database():
         
         # User Skills
         skills = db.query(UserSkill).all()
-        print(f"\n🛠️  USER SKILLS ({len(skills)} total):")
+        print(f"\n??  USER SKILLS ({len(skills)} total):")
         print("-" * 80)
         if skills:
             # Group by user
@@ -95,7 +100,7 @@ def view_database():
         
         # Summary Statistics
         print("\n" + "=" * 80)
-        print("📈 SUMMARY STATISTICS")
+        print("? SUMMARY STATISTICS")
         print("=" * 80)
         print(f"  Total Users: {len(users)}")
         print(f"  Total Career Fields: {len(career_fields)}")
@@ -115,7 +120,7 @@ def view_database():
         print("\n" + "=" * 80)
         
     except Exception as e:
-        print(f"❌ Error reading database: {str(e)}")
+        print(f"? Error reading database: {str(e)}")
         import traceback
         traceback.print_exc()
     finally:

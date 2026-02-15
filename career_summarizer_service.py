@@ -9,7 +9,8 @@ import httpx
 from typing import Optional
 
 # LLaMA Chat API base URL
-LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://25.22.135.242:8002")
+#LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://25.22.135.242:8002")
+LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://localhost:8002")
 
 CAREER_FIELD_SUMMARIZER_INSTRUCTION = """You are a Career Analysis Assistant.
 Your task is to analyze the provided text about a person and identify their main potential career fields.
@@ -104,7 +105,7 @@ Analyze the following text and identify potential career fields:
     
     try:
         # Call the LLaMA Chat API
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=10.0)) as client:
             try:
                 response = await client.post(
                     f"{LLAMA_CHAT_API_URL}/chat",

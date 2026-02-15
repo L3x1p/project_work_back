@@ -3,7 +3,8 @@ import asyncio
 import httpx
 import os
 
-LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://25.22.135.242:8002")
+#LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://25.22.135.242:8002")
+LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://localhost:8002")
 
 async def test_connection():
     print(f"Testing connection to {LLAMA_CHAT_API_URL}")
