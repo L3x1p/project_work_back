@@ -37,7 +37,7 @@ def crawl_linkedin_api(url: str) -> Optional[Dict]:
 def is_job(obj):
     """Check if object is a job posting"""
     if '$type' not in obj or obj['$type'] != 'com.linkedin.voyager.dash.jobs.JobPosting':
-        return Falsef
+        return False
     return True
 
 
