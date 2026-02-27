@@ -1,6 +1,6 @@
 """
 Service for summarizing a person's main potential career fields from text using LLM.
-Uses the LLaMA Chat API microservice running on localhost:8002
+Uses the LLLM Chat API microservice running on localhost:8002
 """
 import os
 import json
@@ -8,9 +8,9 @@ import re
 import httpx
 from typing import Optional
 
-# LLaMA Chat API base URL
-#LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://25.22.135.242:8002")
-LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://localhost:8002")
+# LLM Chat API base URL
+#LLM_CHAT_API_URL = os.getenv("LLM_CHAT_API_URL", "http://25.22.135.242:8002")
+LLM_CHAT_API_URL = os.getenv("LLM_CHAT_API_URL", "http://localhost:8002")
 
 CAREER_FIELD_SUMMARIZER_INSTRUCTION = """You are a Career Analysis Assistant.
 Your task is to analyze the provided text about a person and identify their main potential career fields.
@@ -81,7 +81,7 @@ def _extract_first_json_object(text: str) -> Optional[str]:
 
 async def summarize_career_fields(text: str) -> dict:
     """
-    Analyze text about a person and summarize their main potential career fields using LLaMA Chat API.
+    Analyze text about a person and summarize their main potential career fields using LLM Chat API.
     
     Parameters:
       text (str): Text containing information about the person (e.g., resume, bio, description)
@@ -96,7 +96,7 @@ async def summarize_career_fields(text: str) -> dict:
             "overall_summary": ""
         }
     
-    # Build the prompt message for the LLaMA Chat API
+    # Build the prompt message for the LLM Chat API
     prompt_message = f"""{CAREER_FIELD_SUMMARIZER_INSTRUCTION}
 
 Analyze the following text and identify potential career fields:
@@ -104,11 +104,11 @@ Analyze the following text and identify potential career fields:
 {text}"""
     
     try:
-        # Call the LLaMA Chat API
+        # Call the LLM Chat API
         async with httpx.AsyncClient(timeout=httpx.Timeout(300.0, connect=10.0)) as client:
             try:
                 response = await client.post(
-                    f"{LLAMA_CHAT_API_URL}/chat",
+                    f"{LLM_CHAT_API_URL}/chat",
                     json={
                         "message": prompt_message,
                         "temperature": 0.7,
@@ -121,13 +121,13 @@ Analyze the following text and identify potential career fields:
                 result = response.json()
             except httpx.ConnectError as e:
                 return {
-                    "error": f"Cannot connect to LLM service at {LLAMA_CHAT_API_URL}/chat. Connection refused. Is the service running? Error: {str(e)}",
+                    "error": f"Cannot connect to LLM service at {LLM_CHAT_API_URL}/chat. Connection refused. Is the service running? Error: {str(e)}",
                     "career_fields": [],
                     "overall_summary": ""
                 }
             except httpx.TimeoutException as e:
                 return {
-                    "error": f"Timeout connecting to LLM service at {LLAMA_CHAT_API_URL}. The request took longer than 60 seconds.",
+                    "error": f"Timeout connecting to LLM service at {LLM_CHAT_API_URL}. The request took longer than 60 seconds.",
                     "career_fields": [],
                     "overall_summary": ""
                 }
@@ -180,13 +180,13 @@ Analyze the following text and identify potential career fields:
     except httpx.RequestError as e:
         error_details = str(e) if str(e) else f"{type(e).__name__}"
         return {
-            "error": f"Request error connecting to LLM service: {error_details}. Make sure the LLaMA Chat API is running on {LLAMA_CHAT_API_URL} and accessible. Check if the service is responding to POST requests at {LLAMA_CHAT_API_URL}/chat",
+            "error": f"Request error connecting to LLM service: {error_details}. Make sure the LLM Chat API is running on {LLM_CHAT_API_URL} and accessible. Check if the service is responding to POST requests at {LLM_CHAT_API_URL}/chat",
             "career_fields": [],
             "overall_summary": ""
         }
     except httpx.TimeoutException as e:
         return {
-            "error": f"Timeout connecting to LLM service at {LLAMA_CHAT_API_URL}. The request took longer than 60 seconds. The LLM service might be overloaded or slow.",
+            "error": f"Timeout connecting to LLM service at {LLM_CHAT_API_URL}. The request took longer than 60 seconds. The LLM service might be overloaded or slow.",
             "career_fields": [],
             "overall_summary": ""
         }

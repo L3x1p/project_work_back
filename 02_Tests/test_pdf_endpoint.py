@@ -9,13 +9,13 @@ import json
 import os
 
 BASE_URL = "http://localhost:8000"
-LLAMA_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://localhost:8002")
+LLM_API_URL = os.getenv("LLM_CHAT_API_URL", "http://localhost:8002")
 
 def test_endpoint():
     """Test if the endpoint is accessible"""
     print("Testing PDF extraction endpoint with LLM career analysis...")
     print(f"Server URL: {BASE_URL}")
-    print(f"LLM Service URL: {LLAMA_API_URL}")
+    print(f"LLM Service URL: {LLM_API_URL}")
     print()
     
     # Test 1: Check if server is running
@@ -29,7 +29,7 @@ def test_endpoint():
     
     # Test 2: Check if LLM service is running
     try:
-        response = requests.get(f"{LLAMA_API_URL}/health", timeout=5)
+        response = requests.get(f"{LLM_API_URL}/health", timeout=5)
         if response.status_code == 200:
             health = response.json()
             if health.get("model_loaded"):
@@ -39,8 +39,8 @@ def test_endpoint():
         else:
             print(f"⚠️  LLM service responded with status {response.status_code}")
     except requests.exceptions.ConnectionError:
-        print(f"❌ ERROR: Cannot connect to LLM service at {LLAMA_API_URL}!")
-        print("   Make sure the LLaMA Chat API is running on port 8002")
+        print(f"❌ ERROR: Cannot connect to LLM service at {LLM_API_URL}!")
+        print("   Make sure the LLM Chat API is running on port 8002")
         return False
     except Exception as e:
         print(f"⚠️  Could not check LLM service health: {e}")

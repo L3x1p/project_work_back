@@ -42,7 +42,7 @@ Returns basic service information.
 **Response:**
 ```json
 {
-  "service": "LLaMA Chat API",
+  "service": "LLM Chat API",
   "version": "1.0.0",
   "docs": "/docs",
   "health": "/health"

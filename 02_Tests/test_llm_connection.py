@@ -3,16 +3,16 @@ import asyncio
 import httpx
 import os
 
-#LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://25.22.135.242:8002")
-LLAMA_CHAT_API_URL = os.getenv("LLAMA_CHAT_API_URL", "http://localhost:8002")
+#LLM_CHAT_API_URL = os.getenv("LLM_CHAT_API_URL", "http://25.22.135.242:8002") #Same port
+LLM_CHAT_API_URL = os.getenv("LLM_CHAT_API_URL", "http://localhost:8002")
 
 async def test_connection():
-    print(f"Testing connection to {LLAMA_CHAT_API_URL}")
+    print(f"Testing connection to {LLM_CHAT_API_URL}")
     
     # Test 1: Health check
     try:
         async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"{LLAMA_CHAT_API_URL}/health")
+            response = await client.get(f"{LLM_CHAT_API_URL}/health")
             print(f"✅ Health check: {response.status_code}")
             print(f"   Response: {response.json()}")
     except Exception as e:
@@ -22,9 +22,9 @@ async def test_connection():
     # Test 2: Chat endpoint
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
-            print(f"\nTesting POST to {LLAMA_CHAT_API_URL}/chat")
+            print(f"\nTesting POST to {LLM_CHAT_API_URL}/chat")
             response = await client.post(
-                f"{LLAMA_CHAT_API_URL}/chat",
+                f"{LLM_CHAT_API_URL}/chat",
                 json={
                     "message": "Hello, this is a test",
                     "temperature": 0.7,
@@ -37,7 +37,7 @@ async def test_connection():
             print(f"   Response: {response.json()}")
     except httpx.ConnectError as e:
         print(f"❌ Connection error: {e}")
-        print(f"   Cannot connect to {LLAMA_CHAT_API_URL}/chat")
+        print(f"   Cannot connect to {LLM_CHAT_API_URL}/chat")
         print(f"   Make sure the service is running and accessible")
     except httpx.TimeoutException as e:
         print(f"❌ Timeout error: {e}")

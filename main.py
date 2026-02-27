@@ -19,7 +19,7 @@ from io import BytesIO
 import random
 import httpx
 
-from career_summarizer_service import summarize_career_fields, LLAMA_CHAT_API_URL
+from career_summarizer_service import summarize_career_fields, LLM_CHAT_API_URL
 from linkedin_scraper import scrape_jobs
 
 # ============================================
@@ -27,9 +27,14 @@ from linkedin_scraper import scrape_jobs
 # ============================================
 
 # Database URL - update with your PostgreSQL credentials
+#DATABASE_URL = os.getenv(
+#    "DATABASE_URL",
+#    "postgresql://auth_user:Qqwerty1!@25.22.135.242:5433/auth_db"
+#)
+
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://auth_user:Qqwerty1!@25.22.135.242:5433/auth_db"
+    "postgresql://postgres:postgres@localhost:5432/postgres"
 )
 
 # JWT Settings
@@ -730,7 +735,7 @@ async def career_chat(
     try:
         async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
             resp = await client.post(
-                f"{LLAMA_CHAT_API_URL}/chat",
+                f"{LLM_CHAT_API_URL}/chat",
                 json={
                     "message": prompt,
                     "temperature": 0.7,
